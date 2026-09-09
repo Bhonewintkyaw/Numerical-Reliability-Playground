@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import GraphsTab from './components/GraphsTab.jsx';
 import MarkovTab from './components/MarkovTab.jsx';
 import GraphicsTab from './components/GraphicsTab.jsx';
 import CryptoTab from './components/CryptoTab.jsx';
+import BonusTab from './components/BonusTab.jsx';
+import { EPS, cond2 } from './lib/numerics.js';
 
 const TABS = [
-  { id: 'g', label: 'Graphs', sub: 'incidence → tree' },
-  { id: 'm', label: 'Markov', sub: 'steady state' },
-  { id: 'c', label: 'Graphics', sub: 'transforms' },
-  { id: 'k', label: 'Crypto', sub: 'Hill mod 26' },
+  { id: 'g', label: '01 Graphs', sub: 'networks' },
+  { id: 'm', label: '02 Markov', sub: 'steady state' },
+  { id: 'c', label: '03 Graphics', sub: 'transforms' },
+  { id: 'k', label: '04 Crypto', sub: 'Hill mod 26' },
+  { id: 'b', label: '★ Bonus', sub: 'naive vs reliable' },
 ];
 
 function initialTheme() {
@@ -21,27 +24,35 @@ function initialTheme() {
   return 'light';
 }
 
+const FALLBACK_COND = {
+  value: cond2(EPS, 1, -1, 1),
+  what: 'toolkit system',
+  note: 'κ is small — the problem is fine. The <b>u = 0</b> failure is the <i>algorithm</i>.',
+};
+
 export default function App() {
   const [tab, setTab] = useState('g');
   const [pivotOn, setPivotOn] = useState(true);
   const [theme, setTheme] = useState(initialTheme);
+  const [tabCond, setTabCond] = useState(FALLBACK_COND);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem('nrp-theme', theme); } catch { /* ignore */ }
   }, [theme]);
 
+  const reportCond = useCallback((c) => { setTabCond(c); }, []);
   const dark = theme === 'dark';
 
   return (
     <div className="layout">
-      <Sidebar pivotOn={pivotOn} setPivotOn={setPivotOn} />
+      <Sidebar pivotOn={pivotOn} setPivotOn={setPivotOn} tabCond={tabCond} />
       <main>
         <header>
           <div className="topbar">
             <div>
-              <h2>Reliability Playground <span className="hdr-sub">· Ch. 10</span></h2>
-              <p>Drag · slide · type. The sidebar shows why each demo can break.</p>
+              <h2>The Numerical Reliability Playground <span className="hdr-sub">· Ch. 10 + 11</span></h2>
+              <p>Tabs 1–4: the main demo — one toolkit, four faces. Tab 5: bonus head-to-head.</p>
             </div>
             <button
               className="theme-btn"
@@ -62,22 +73,25 @@ export default function App() {
               {dark ? 'Day' : 'Night'}
             </button>
           </div>
-          <div className="tabs" role="tablist" aria-label="Applications">
+          <div className="tabs" role="tablist" aria-label="Demos">
             {TABS.map((t) => (
-              <button key={t.id} role="tab" aria-selected={tab === t.id}
-                className={tab === t.id ? 'tab-btn active' : 'tab-btn'} onClick={() => setTab(t.id)}>
+              <button
+                key={t.id} role="tab" aria-selected={tab === t.id} data-t={t.id}
+                className={tab === t.id ? 'tab-btn active' : 'tab-btn'} onClick={() => setTab(t.id)}
+              >
                 {t.label} <small>· {t.sub}</small>
               </button>
             ))}
           </div>
         </header>
         <div className="content">
-          {tab === 'g' && <GraphsTab theme={theme} />}
-          {tab === 'm' && <MarkovTab theme={theme} />}
-          {tab === 'c' && <GraphicsTab theme={theme} />}
-          {tab === 'k' && <CryptoTab theme={theme} />}
+          {tab === 'g' && <div className="panel active acc-g"><GraphsTab theme={theme} onCond={reportCond} /></div>}
+          {tab === 'm' && <div className="panel active acc-m"><MarkovTab theme={theme} onCond={reportCond} /></div>}
+          {tab === 'c' && <div className="panel active acc-c"><GraphicsTab theme={theme} onCond={reportCond} /></div>}
+          {tab === 'k' && <div className="panel active acc-k"><CryptoTab onCond={reportCond} /></div>}
+          {tab === 'b' && <div className="panel active acc-b"><BonusTab onCond={reportCond} /></div>}
         </div>
-        <footer>Pivot → measure → trust · Vite + React</footer>
+        <footer>Pivot → measure → trust · main demo tabs 1–4, bonus tab 5 · Vite + React</footer>
       </main>
     </div>
   );

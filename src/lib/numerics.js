@@ -9,7 +9,12 @@ export function sigRound(x, sig) {
 
 export function fmt(x, d = 4) {
   if (!isFinite(x)) return '∞';
+  if (x !== 0 && Math.abs(x) < 1e-6) return x.toExponential(1);
   return Number(x.toFixed(d)).toString();
+}
+
+export function sci(x) {
+  return x.toExponential(0);
 }
 
 export function matATA(a, b, c, d) {
@@ -21,8 +26,8 @@ export function matATA(a, b, c, d) {
 
 export function cond2(a, b, c, d) {
   const [l1, l2] = matATA(a, b, c, d);
-  if (l2 <= 1e-14) return Infinity;
-  return Math.sqrt(l1 / l2);
+  if (l2 <= 1e-18) return Infinity;
+  return Math.sqrt(Math.max(l1, 0) / l2);
 }
 
 export function egcd(a, b) {
@@ -36,6 +41,12 @@ export function modInv(a, m) {
   const [g, x] = egcd(a, m);
   if (g !== 1) return null;
   return ((x % m) + m) % m;
+}
+
+export function gcd(a, b) {
+  a = Math.abs(a); b = Math.abs(b);
+  while (b) { const t = a % b; a = b; b = t; }
+  return a;
 }
 
 export function cleanText(s) {
@@ -53,13 +64,13 @@ export function sidebarSolve(pivotOn) {
     const u = sigRound((1 - v) / EPS, 3); // 0
     return {
       u, v,
-      log: `WITHOUT pivoting (3 sig figs)\nmult = 1/ε = ${mult}\n(1+1/ε)·v = 1/ε → ${coeff}·v = ${mult}\nv = ${fmt(v, 4)}\nu = (1−v)/ε = ${fmt(u, 4)}  ← WRONG`,
+      log: `WITHOUT pivoting (3 digits)\nmult = 1/ε = ${mult}\n(1+1/ε)·v = 1/ε → ${coeff}·v = ${mult}\nv = ${fmt(v, 4)}\nu = (1−v)/ε = ${fmt(u, 4)}  ← WRONG`,
     };
   }
   const coeff = sigRound(1 + EPS, 3); // 1.00
   const v = sigRound(1 / coeff, 3); // 1
   return {
     u: v, v,
-    log: `WITH pivoting (3 sig figs)\nswap rows → pivot = −1\nmult = ε/−1 = −0.0001\n(1+ε)·v = 1 → ${coeff}·v = 1\nv = ${fmt(v, 4)} · u = v = ${fmt(v, 4)}  ✓`,
+    log: `WITH pivoting (3 digits)\nswap rows → pivot = −1\nmult = ε/−1 = −0.0001\n(1+ε)·v = 1 → ${coeff}·v = 1\nv = ${fmt(v, 4)} · u = v = ${fmt(v, 4)}  ✓`,
   };
 }
